@@ -2,54 +2,11 @@ extern crate criterion;
 extern crate mtt;
 extern crate rand;
 
-
 use std::collections::HashMap;
-
 use criterion::Criterion;
-
-use mtt::TreeWrapper;
-use mtt::VmtWrapper;
-
-static STEP_SIZE: usize = 500;
-
-fn benchmark_constructor(c: &mut Criterion, counts: Vec<usize>, test_data: Vec<Vec<String>>,
-                         wrapper_map: &HashMap<String, &'static Fn(&Vec<String>) -> VmtWrapper>) {
-    for (key, tree_factory) in wrapper_map {
-        let data: Vec<Vec<String>> = test_data.clone();
-        let mut title = key.clone();
-        title.push_str(" Creation");
-        let factory = *tree_factory;
-        c.bench_function_over_inputs(title.as_str(),
-                                     move |b, i| {
-                                         b.iter(|| factory(&data[*i / STEP_SIZE - 1]));
-                                     },
-                                     counts.clone(),
-        );
-    }
-}
-
-fn benchmark_method(c: &mut Criterion, counts: Vec<usize>, test_data: Vec<Vec<String>>,
-                    wrapper_map: &HashMap<String, &'static Fn(&Vec<String>) -> VmtWrapper>) {
-    for (key, tree_factory) in wrapper_map {
-        let data: Vec<Vec<String>> = test_data.clone();
-        let mut title = key.clone();
-        title.push_str(" Find");
-        let mut trees: Vec<VmtWrapper> = vec![];
-        for d in &data {
-            trees.push(tree_factory(d));
-        }
-        c.bench_function_over_inputs(title.as_str(),
-                                     move |b, i| {
-                                         b.iter(|| {
-                                             let index = *i / STEP_SIZE - 1;
-                                             let item_index = rand::random::<usize>() % data[index].len();
-                                             trees[index].find(&data[index][item_index]);
-                                         });
-                                     },
-                                     counts.clone(),
-        );
-    }
-}
+use mtt::*;
+use mtt::vmt_wrapper::*;
+use mtt::mtrs_wrapper::*;
 
 fn generate_blocks(counts: &Vec<usize>) -> Vec<Vec<String>> {
     let mut result: Vec<Vec<String>> = vec![];
@@ -67,31 +24,52 @@ fn generate_blocks(counts: &Vec<usize>) -> Vec<Vec<String>> {
     result
 }
 
-pub fn creation_benches(wrapper_map: &HashMap<String, &'static Fn(&Vec<String>) -> VmtWrapper>) {
-    let (counts, test_data, mut criterion) = prepare_test();
-    benchmark_constructor(&mut criterion, counts, test_data, wrapper_map);
-}
-
-pub fn find_benches(wrapper_map: &HashMap<String, &'static Fn(&Vec<String>) -> VmtWrapper>) {
-    let (counts, test_data, mut criterion) = prepare_test();
-    benchmark_method(&mut criterion, counts, test_data, wrapper_map);
-}
-
 fn prepare_test() -> (Vec<usize>, Vec<Vec<String>>, Criterion) {
-    let counts: Vec<usize> = (1..7).map(|i| i * STEP_SIZE).collect();
+    let counts: Vec<usize> = (1..7).map(|i| i * mtt::STEP_SIZE).collect();
     let test_data: Vec<Vec<String>> = generate_blocks(&counts);
     let criterion: ::criterion::Criterion =
         ::criterion::Criterion::default().configure_from_args();
     (counts, test_data, criterion)
 }
 
+pub fn creation_benches(wrapper_map: &HashMap<String, Box<TreeWrapper<String>>>) {
+    let (counts, test_data, mut criterion) = prepare_test();
+    for (key, tree_wrapper) in wrapper_map {
+        let data: Vec<Vec<String>> = test_data.clone();
+        let mut title = key.clone();
+        title.push_str(" Creation");
+        tree_wrapper.create(&mut criterion, counts.clone(), data, title);
+    }
+}
+
+pub fn find_benches(wrapper_map: &HashMap<String, Box<TreeWrapper<String>>>) {
+    let (counts, test_data, mut criterion) = prepare_test();
+    for (key, tree_wrapper) in wrapper_map {
+        let data: Vec<Vec<String>> = test_data.clone();
+        let mut title = key.clone();
+        title.push_str(" Find");
+        tree_wrapper.find(&mut criterion, counts.clone(), data, title);
+    }
+}
+
+pub fn validation_benches(wrapper_map: &HashMap<String, Box<TreeWrapper<String>>>) {
+    let (counts, test_data, mut criterion) = prepare_test();
+    for (key, tree_wrapper) in wrapper_map {
+        let data: Vec<Vec<String>> = test_data.clone();
+        let mut title = key.clone();
+        title.push_str(" Validate");
+        tree_wrapper.validate(&mut criterion, counts.clone(), data, title);
+    }
+}
 
 fn main() {
-    let mut wrapper_map: HashMap<String, &'static Fn(&Vec<String>) -> VmtWrapper> = HashMap::new();
-    wrapper_map.insert(String::from("Vector Merkle Tree"), &VmtWrapper::create_tree);
-    wrapper_map.insert(String::from("Vector Merkle Tree With Map"), &VmtWrapper::create_tree_with_map);
+    let mut wrapper_map: HashMap<String, Box<TreeWrapper<String>>> = HashMap::new();
+    wrapper_map.insert(String::from("Vector Merkle Tree"), Box::new(VmtWrapper::new(false)));
+    wrapper_map.insert(String::from("Vector Merkle Tree With Map"), Box::new(VmtWrapper::new(true)));
+    wrapper_map.insert(String::from("Merkle Tree RS"), Box::new(MtrsWrapper::new()));
 
-    find_benches(&wrapper_map);
+    //find_benches(&wrapper_map);
     creation_benches(&wrapper_map);
+    //validation_benches(&wrapper_map);
     ::criterion::Criterion::default().configure_from_args().final_summary();
 }

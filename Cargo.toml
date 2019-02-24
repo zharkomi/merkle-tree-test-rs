@@ -6,6 +6,7 @@ authors = ["Mikhail Zharkov"]
 [dependencies]
 criterion = "0.2"
 vmt = { path = "../vector-merkle-tree" }
+merkle = "1.10.0"
 ring = "^0.13.0"
 rand = "0.6.0"
 

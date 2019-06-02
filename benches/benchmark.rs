@@ -3,10 +3,12 @@ extern crate mtt;
 extern crate rand;
 
 use std::collections::HashMap;
+
 use criterion::Criterion;
+
 use mtt::*;
-use mtt::vmt_wrapper::*;
 use mtt::mtrs_wrapper::*;
+use mtt::vmt_wrapper::*;
 
 fn generate_blocks(counts: &Vec<usize>) -> Vec<Vec<String>> {
     let mut result: Vec<Vec<String>> = vec![];
@@ -64,12 +66,14 @@ pub fn validation_benches(wrapper_map: &HashMap<String, Box<TreeWrapper<String>>
 
 fn main() {
     let mut wrapper_map: HashMap<String, Box<TreeWrapper<String>>> = HashMap::new();
-    wrapper_map.insert(String::from("Vector Merkle Tree"), Box::new(VmtWrapper::new(false)));
-    wrapper_map.insert(String::from("Vector Merkle Tree With Map"), Box::new(VmtWrapper::new(true)));
+    wrapper_map.insert(String::from("Vector Merkle Tree"), Box::new(VmtWrapper::new(false, false)));
+    wrapper_map.insert(String::from("Vector Merkle Tree With Map"), Box::new(VmtWrapper::new(false, true)));
+    //wrapper_map.insert(String::from("Cloned Vector Merkle Tree"), Box::new(VmtWrapper::new(true, false)));
+    //wrapper_map.insert(String::from("Cloned Vector Merkle Tree With Map"), Box::new(VmtWrapper::new(true, true)));
     wrapper_map.insert(String::from("Merkle Tree RS"), Box::new(MtrsWrapper::new()));
 
-    //find_benches(&wrapper_map);
+    find_benches(&wrapper_map);
     creation_benches(&wrapper_map);
-    //validation_benches(&wrapper_map);
+    validation_benches(&wrapper_map);
     ::criterion::Criterion::default().configure_from_args().final_summary();
 }

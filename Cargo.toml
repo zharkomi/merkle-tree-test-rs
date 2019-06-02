@@ -3,6 +3,21 @@ name = "mtt"
 version = "0.1.0"
 authors = ["Mikhail Zharkov"]
 
+[profile.release]
+opt-level = 3
+overflow-checks = true
+
+[profile.bench]
+opt-level = 3
+debug = false
+rpath = false
+lto = false
+debug-assertions = false
+codegen-units = 16
+panic = 'unwind'
+incremental = false
+overflow-checks = false
+
 [dependencies]
 criterion = "0.2"
 vmt = { path = "../vector-merkle-tree" }
